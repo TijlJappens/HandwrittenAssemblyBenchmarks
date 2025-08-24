@@ -1,0 +1,21 @@
+{
+  "name": "Rust Development Container",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "target": "development"
+  },
+  "features": {},
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.shell.linux": "/bin/bash"
+      },
+      "extensions": [
+        "rust-lang.rust-analyzer"
+      ]
+    }
+  },
+  "forwardPorts": [],
+  "postCreateCommand": "cargo --version",
+  "remoteUser": "root"
+}
