@@ -17,12 +17,25 @@ pub fn cosine(angle: f32) -> f32 {
     1.0 - angle_squared * (1.0 / 2.0) + angle_fourth * (1.0 / 24.0)
 }
 
+#[inline(always)]
+pub fn sine_cosine(angle: f32) -> (f32, f32) {
+    let angle_squared = angle * angle;
+    let angle_cubed = angle * angle_squared;
+    let angle_fourth = angle_squared * angle_squared;
+    let angle_fifth = angle_cubed * angle_squared;
+
+    let sine = angle - angle_cubed * (1.0 / 6.0) + angle_fifth * (1.0 / 120.0);
+    let cosine = 1.0 - angle_squared * (1.0 / 2.0) + angle_fourth * (1.0 / 24.0);
+
+    (sine, cosine)
+}
+
 
 
 pub fn my_function(slice: &[f32]) -> f32 {
     slice
         .iter()
-        .map(|x| (sine(*x), cosine(*x)))
+        .map(|x| sine_cosine(*x))
         .map(|(s, c)| s*s + c*c)
         .sum()
 }

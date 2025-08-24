@@ -1,4 +1,6 @@
 # Rust development Dockerfile
-FROM rust:latest as base
+FROM rust:latest AS base
 
-from base as development
+RUN rustup default nightly
+
+FROM base AS development
