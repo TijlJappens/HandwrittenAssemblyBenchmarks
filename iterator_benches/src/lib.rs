@@ -53,6 +53,7 @@ pub fn my_function_with_assembly(slice: &[f32]) -> f32 {
             let (sine_simd, cosine_simd) = simd_operations::sine_cosine_simd(chunk);
             unsafe{
                 asm!(
+                    // simd_value_so_far = simd_value_so_far + sine_simd^2 + cosine_simd^2
                     "mulps {1}, {1}",
                     "mulps {2}, {2}",
                     "addps {0}, {1}",
@@ -62,7 +63,7 @@ pub fn my_function_with_assembly(slice: &[f32]) -> f32 {
                     // Input variables
                     in(xmm_reg) sine_simd,
                     in(xmm_reg) cosine_simd,
-                    options(nostack)
+                    options(nostack, nomem, pure)
                 );
             }
             simd_value_so_far

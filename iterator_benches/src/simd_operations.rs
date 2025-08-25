@@ -3,6 +3,61 @@ use std::arch::asm;
 
 #[inline(always)]
 pub fn sine_cosine_simd(mut angle: __m128) -> (__m128, __m128) {
+    let mut cosine: __m128 = unsafe { std::arch::x86_64::_mm_set1_ps(1.0_f32) };
+    unsafe {
+        asm!(
+            // xmm2 = angle^2
+            "movaps {2}, {0}",
+            "mulps {2}, {0}",
+            // xmm3 = angle^3 = angle * angle^2
+            "movaps {3}, {2}",
+            "mulps {3}, {0}",
+
+            // Sine: Horner's method with FMA
+            // xmm4 = tmp = angle^2 * (1/120) + (-1/6)
+            "movaps {4}, {9}",           // {9} = 1/120
+            "vfmadd213ps {4}, {2}, {8}", // {4} = {4} * {2} + {8}, {8} = -1/6
+            // xmm5 = angle^3 * tmp
+            "movaps {5}, {3}",
+            "mulps {5}, {4}",
+            // xmm0 = angle + angle^3 * tmp
+            "addps {0}, {5}",
+
+            // Cosine: Horner's method with FMA
+            // xmm6 = tmp = angle^2 * (1/24) + (-1/2)
+            "movaps {6}, {11}",           // {11} = 1/24
+            "vfmadd213ps {6}, {2}, {10}",  // {6} = {6} * {2} + {10}, {10} = -1/2
+            // xmm7 = angle^2 * tmp
+            "movaps {7}, {2}",
+            "mulps {7}, {6}",
+            // xmm1 = 1.0 + angle^2 * tmp
+            "addps {1}, {7}",
+
+            inout(xmm_reg) angle, // 0
+            inout(xmm_reg) cosine, // 1
+
+            out(xmm_reg) _, // 2 angle^2
+            out(xmm_reg) _, // 3 angle^3
+            out(xmm_reg) _, // 4 tmp for sine
+            out(xmm_reg) _, // 5 angle^3 * tmp
+            out(xmm_reg) _, // 6 tmp for cosine
+            out(xmm_reg) _, // 7 angle^2 * tmp
+
+            in(xmm_reg) std::arch::x86_64::_mm_set1_ps(-1.0_f32/6.0_f32),  // 8 (for sine)
+            in(xmm_reg) std::arch::x86_64::_mm_set1_ps(1.0_f32/120.0_f32), // 9 (for sine)
+
+            in(xmm_reg) std::arch::x86_64::_mm_set1_ps(-1.0_f32/2.0_f32),  // 10 (for cosine)
+            in(xmm_reg) std::arch::x86_64::_mm_set1_ps(1.0_f32/24.0_f32),  // 11 (for cosine)
+
+            options(nostack, nomem, pure)
+        );
+    }
+    (angle, cosine)
+}
+
+#[inline(always)]
+/// This function is without using horners method and vfmadd213ps
+pub fn sine_cosine_simd_old(mut angle: __m128) -> (__m128, __m128) {
     // We will store sine in angle and the cosine in a second variable
     let mut cosine: __m128 = unsafe { std::arch::x86_64::_mm_set1_ps(1.0_f32) };
     unsafe {
@@ -54,7 +109,7 @@ pub fn sine_cosine_simd(mut angle: __m128) -> (__m128, __m128) {
             in(xmm_reg) std::arch::x86_64::_mm_set1_ps(1.0_f32/24.0_f32), // 7
             in(xmm_reg) std::arch::x86_64::_mm_set1_ps(-1.0_f32/6.0_f32), // 8
             in(xmm_reg) std::arch::x86_64::_mm_set1_ps(1.0_f32/120.0_f32), // 9
-            options(nostack)
+            options(nostack, nomem, pure)
         );
     }
     (angle, cosine)
